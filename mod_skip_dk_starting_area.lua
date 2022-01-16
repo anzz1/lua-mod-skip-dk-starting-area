@@ -242,16 +242,25 @@ local function onLKSpawn(event, creature)
 end
 
 local function onFirstLogin(event, player)
-	if (AutoSkip and (not GM_Only or player:GetGMRank() >= 1)) then
-		player:SendCinematicStart(0)
+	if (not GM_Only or player:GetGMRank() >= 1) then
 		skipDKStarter(player)
+	end
+end
+
+local function onSendCinematic(event, packet, player)
+	if (packet:ReadULong() == 165) then 
+		return false
 	end
 end
 
 RegisterCreatureEvent(NPC_LK, 5, onLKSpawn)
 RegisterCreatureGossipEvent(NPC_LK, 1, onGossipHello)
 RegisterCreatureGossipEvent(NPC_LK, 2, onGossipSelect)
-RegisterPlayerEvent(30, onFirstLogin)
+
+if (AutoSkip) then
+	RegisterPlayerEvent(30, onFirstLogin)
+	RegisterPacketEvent(250, 7, onSendCinematic) -- PACKET_EVENT_ON_PACKET_SEND (SMSG_TRIGGER_CINEMATIC)
+end
 
 if (AnnounceModule and not GM_Only) then
 	RegisterPlayerEvent(3, function(event,player) 
