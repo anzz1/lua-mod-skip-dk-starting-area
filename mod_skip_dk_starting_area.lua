@@ -7,6 +7,8 @@ local AnnounceModule = true   -- Announce module on player login ?
 
 local AutoSkip = false        -- true: autoskip on first login , false: lich king has option to skip
 local GM_Only = false         -- true: only allow game masters to skip
+local AnnounceZone = true     -- true: when player choose to skip, announce to other deathknights
+                              --       who are in the dk starting zone
 
 ------------------------------------------------------------------------------------------------
 -- END CONFIG
@@ -35,6 +37,9 @@ local RACE_TROLL              = 8
 local RACE_BLOODELF           = 10
 local RACE_DRAENEI            = 11
 
+local HORDE_ICON = "|TInterface\\TargetingFrame\\UI-PVP-HORDE:18:19:0:-2:64:64:0:38:0:36|t"
+local ALLIANCE_ICON = "|TInterface\\TargetingFrame\\UI-PVP-ALLIANCE:19:19:2:-2:64:64:0:38:0:38|t"
+
 local function doQuest(player, id)
 	local reward = false
 	if (player:GetQuestStatus(id) == QUEST_STATUS_FAILED) then
@@ -62,18 +67,66 @@ end
 local function forceEquip(player, slot, itemId)
 	local del = player:GetEquippedItemBySlot(slot)
 	if (del) then
+		local entry = del:GetEntry()
+		if (entry == itemId) then -- item is already equipped
+			return
+		end
 		player:RemoveItem(del,1)
+		local add = player:AddItem(entry,1)
+		if (not add) then
+			PrintError("["..FILE_NAME.."] ERROR: Could not unequip worn item "..entry.." on player \""..player:GetName().."\" while skipping the DK questline and the item was destroyed. This should NOT happen.")
+		end
 	end
 	local item = player:GetItemByEntry(itemId)
+	local equip
 	if (item) then
-		player:EquipItem(item, slot)
+		equip = player:EquipItem(item, slot)
 	else
-		player:EquipItem(itemId, slot)
+		equip = player:EquipItem(itemId, slot)
+	end
+	if (not equip) then
+		PrintError("["..FILE_NAME.."] ERROR: Could not equip quest reward item "..itemId.." on player \""..player:GetName().."\" while skipping the DK questline. This should NOT happen.")
+	end
+end
+
+local function getFreeBagSlots(player)
+	local free = 0
+	for i = 23, 38 do -- backpack
+		if (not player:GetItemByPos(255,i)) then 
+			free = free+1
+		end
+	end
+	for i = 19, 22 do -- equipped bags
+		local bag = player:GetItemByPos(255,i)
+		if (bag) then
+			for x = 0, bag:GetBagSize()-1 do
+				if (not player:GetItemByPos(i,x)) then 
+					free = free+1
+				end
+			end
+		end
+	end
+	return free
+end
+
+local function announceZone(player)
+	local icon = ((player:GetTeam() == 0) and ALLIANCE_ICON) or HORDE_ICON
+	local players = GetMapById(609,0):GetPlayers()
+	for _,p in pairs(players) do
+		p:SendBroadcastMessage("[|cff4CFF00Skip Deathknight Starter|r] "..icon.." [|cffc41f3b|Hplayer:Diikei|hDiikei|h|r] chose to skip the starter questline and was teleported away.")
 	end
 end
 
 local function skipDKStarter(player)
 	if (player:GetClass() ~= 6) then return end -- how did you get here lol?
+	
+	local freeSlots = getFreeBagSlots(player)
+	if(freeSlots < 21) then
+		player:SendBroadcastMessage("[|cff4CFF00Skip Deathknight Starter|r] |cffff2020You need at least 21 available bag space to skip the starter questline|r")
+		player:SendBroadcastMessage("[|cff4CFF00Skip Deathknight Starter|r] You currently have "..freeSlots.." free slots, need "..(21-freeSlots).." more")
+		player:SendNotification("You need "..(21-freeSlots).." more available bag space to continue")
+		return
+	end
 
 	-- first chain (runeforging)
 	doQuest(player, 12593) -- In Service Of The Lich King
@@ -215,6 +268,10 @@ local function skipDKStarter(player)
 	end
 	player:ModifyMoney(-396300)
 	player:SaveToDB()
+	
+	if (AnnounceZone) then
+		announceZone(player)
+	end
 end
 
 local function onGossipHello(event, player, creature)
