@@ -114,7 +114,7 @@ local function announceZone(player)
     local name = player:GetName()
     local players = GetMapById(609,0):GetPlayers()
     for _,p in pairs(players) do
-        p:SendBroadcastMessage("[|cff4CFF00Skip Deathknight Starter|r] "..icon.." [|cffc41f3b|Hplayer:"..name.."|h"..name.."|h|r] chose to skip the starter questline and was teleported away.")
+        p:SendBroadcastMessage("[|cff4CFF00Skip Deathknight Starter|r] "..icon.." |Hplayer:"..name.."|h[|cffc41f3b"..name.."|r]|h chose to skip the starter questline and was teleported away.")
     end
 end
 
