@@ -307,7 +307,9 @@ end
 
 local function onSendCinematic(event, packet, player)
     if (packet:ReadULong() == 165) then 
-        return false
+        if (not GM_Only or player:GetGMRank() >= 1) then
+            return false
+        end
     end
 end
 
