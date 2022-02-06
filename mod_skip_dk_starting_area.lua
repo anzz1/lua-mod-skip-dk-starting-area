@@ -129,6 +129,8 @@ local function skipDKStarter(player)
         return
     end
 
+    local coinage = player:GetCoinage()
+
     -- first chain (runeforging)
     doQuest(player, 12593) -- In Service Of The Lich King
     doQuest(player, 12619) -- The Emblazoned Runeblade
@@ -267,7 +269,7 @@ local function skipDKStarter(player)
     if (player:GetLevel() < 58) then
         player:SetLevel(58)
     end
-    player:ModifyMoney(-396300)
+    player:SetCoinage(coinage)
     player:SaveToDB()
     
     if (AnnounceZone) then
